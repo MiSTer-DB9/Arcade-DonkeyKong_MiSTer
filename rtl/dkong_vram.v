@@ -47,7 +47,13 @@ module dkong_vram(
 
 	input [15:0] DL_ADDR,
 	input DL_WR,
-	input [7:0] DL_DATA
+	input [7:0] DL_DATA,
+
+	//- HISCORE
+	input [15:0]	hs_address,
+	output [7:0]	hs_data_out,
+	input  [7:0]	hs_data_in,
+	input 			hs_write
 	);
 
 //---- Debug ----
@@ -57,7 +63,7 @@ wire   [7:0]WO_DB;
 
 assign O_DB       = I_VRAM_RDn ? 8'h00: WO_DB;
 
-wire   [4:0]W_HF_CNT  = I_H_CNT[8:4]^{I_FLIP,I_FLIP,I_FLIP,I_FLIP,I_FLIP};
+wire   [4:0]W_HF_CNT  = I_H_CNT[8:4]^{5{I_FLIP}};
 wire   [9:0]W_cnt_AB  = {I_VF_CNT[7:3],W_HF_CNT[4:0]};
 wire   [9:0]W_vram_AB = I_CMPBLK ? W_cnt_AB : I_AB ;
 wire        W_vram_CS = I_CMPBLK ? 1'b0     : I_VRAM_WRn & I_VRAM_RDn;
@@ -66,14 +72,21 @@ wire        W_2S4     = I_CMPBLK ? 1'b0     : 1'b1 ;
 wire CLK_2M = ~(&I_H_CNT[3:1]) /* synthesis keep */;
 wire CLK_2M_EN = CLK_EN & I_H_CNT[3:0] == 4'b1111/* synthesis keep */;
 
-ram_1024_8 U_2PR(
+ram_1024_8_8 U_2PR(
 
-.I_CLK(CLK_24M),
-.I_ADDR(W_vram_AB),
-.I_D(WI_DB),
-.I_CE(~W_vram_CS),
-.I_WE(~I_VRAM_WRn),
-.O_D(WO_DB)
+.I_CLKA(CLK_24M),
+.I_ADDRA(W_vram_AB),
+.I_DA(WI_DB),
+.I_CEA(~W_vram_CS),
+.I_WEA(~I_VRAM_WRn),
+.O_DA(WO_DB),
+
+.I_CLKB(CLK_24M),
+.I_ADDRB(hs_address[9:0]),
+.I_DB(hs_data_in),
+.I_CEB(1'b1),
+.I_WEB(hs_write),
+.O_DB(hs_data_out)
 
 );
 
@@ -159,7 +172,7 @@ begin
    if(I_H_CNT[9] == 1'b0)
       W_VRAMBUSY <= 1'b1;
    else if (CLK_EN & I_H_CNT[2:0] == 3'b0111)
-      W_VRAMBUSY <= I_H_CNT[4]&I_H_CNT[5]&I_H_CNT[6]&I_H_CNT[7];
+      W_VRAMBUSY <= &I_H_CNT[7:4];
 end
 
 //------  PARTS 2K2 ----------------------------------------------
