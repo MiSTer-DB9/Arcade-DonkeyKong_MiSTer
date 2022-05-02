@@ -95,12 +95,34 @@ dkong_wav_sound Analog_sound
 
 	.I_CLK(W_CLK_24576M),
 	.I_RSTn(W_RESETn),
-	.I_SW(I_DKJR ? 3'b000 : W_6H_Q[2:0])
+	.I_SW(I_DKJR ? 2'b00 : W_6H_Q[2:1])
+);
+
+reg [8:0] audio_clk_counter;
+wire audio_clk_en;
+assign audio_clk_en = audio_clk_counter == 0;
+wire signed[15:0] walk_out;
+
+always@(posedge W_CLK_24576M, negedge W_RESETn) begin
+	if(!W_RESETn)begin
+		audio_clk_counter <= 0;
+	end else begin
+		audio_clk_counter <= audio_clk_counter + 1;
+	end
+end
+
+dk_walk #(.CLOCK_RATE(24576000),.SAMPLE_RATE(48000)) walk (
+	.clk(W_CLK_24576M),
+	.I_RSTn(W_RESETn),
+	.audio_clk_en(audio_clk_en),
+	.walk_en(~W_6H_Q[0]),
+	.out(walk_out)
 );
 
 //  SOUND MIXER (WAV + DIG ) -----------------------
-wire   [8:0]sound_mix = {1'b0, I_DKJR ? 8'd0 : WAV_ROM_DO} + {1'b0, W_D_S_DAT};
+wire   [9:0]sound_mix = {1'b0, I_DKJR ? 8'd0 : WAV_ROM_DO, 1'b0} + {1'b0, (W_D_S_DAT >> 1) + (W_D_S_DAT >> 3)};
+wire signed[15:0]sound_mix_16_bit = ({sound_mix, 5'b0} - 2**15) + walk_out;
 
-assign O_SOUND_DAT = sound_mix[8:1];
+assign O_SOUND_DAT = sound_mix_16_bit + 2**15;
 
 endmodule
