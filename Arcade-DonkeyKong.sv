@@ -28,7 +28,7 @@ module emu
 	input 				RESET,
 
 	//Must be passed to hps_io module
-	inout [45:0] 	HPS_BUS,
+	inout  [48:0] HPS_BUS,
 
 	//Base video clock. Usually equals to CLK_SYS.
 	output 				CLK_VIDEO,
@@ -51,13 +51,14 @@ module emu
 	output        VGA_F1,
 	output [1:0]  VGA_SL,
 	output        VGA_SCALER, // Force VGA scaler
+	output        VGA_DISABLE, // analog out is off
 
 	input  [11:0] HDMI_WIDTH,
 	input  [11:0] HDMI_HEIGHT,
 	output        HDMI_FREEZE,
 
 `ifdef MISTER_FB
-	// Use framebuffer in DDRAM (USE_FB=1 in qsf)
+	// Use framebuffer in DDRAM
 	// FB_FORMAT:
 	//    [2:0] : 011=8bpp(palette) 100=16bpp 101=24bpp 110=32bpp
 	//    [3]   : 0=16bits 565 1=16bits 1555
@@ -196,12 +197,13 @@ assign LED_POWER = 0;
 assign BUTTONS   = 0;
 assign AUDIO_MIX = 0;
 assign HDMI_FREEZE = 0;
+assign VGA_DISABLE = 0;
 assign FB_FORCE_BLANK = 0;
 
 wire [1:0] ar = status[20:19];
 
-assign VIDEO_ARX = (!ar) ? ((status[2]|mod_pestplace)  ? 8'd4 : 8'd3) : (ar - 1'd1);
-assign VIDEO_ARY = (!ar) ? ((status[2]|mod_pestplace)  ? 8'd3 : 8'd4) : 12'd0;
+assign VIDEO_ARX = (!ar) ? ((status[2]|mod_pestplace)  ? 8'd8 : 8'd7) : (ar - 1'd1);
+assign VIDEO_ARY = (!ar) ? ((status[2]|mod_pestplace)  ? 8'd7 : 8'd8) : 12'd0;
 
 `include "build_id.v" 
 localparam CONF_STR = {
@@ -310,6 +312,7 @@ hps_io #(.CONF_STR(CONF_STR)) hps_io
 	.forced_scandoubler(forced_scandoubler),
 	.gamma_bus(gamma_bus),
 	.direct_video(direct_video),
+	.video_rotated(video_rotated),
 
 	.ioctl_upload(ioctl_upload),
 	.ioctl_upload_req(ioctl_upload_req),
@@ -350,17 +353,17 @@ always @(posedge clk_sys) begin
 end
 
 // Player inputs
-wire m_up_2     = joy[3];
-wire m_down_2   = joy[2];
-wire m_left_2   = joy[1];
-wire m_right_2  = joy[0];
-wire m_fire_2   = joy[4];
+wire m_up_2    = mod_pestplace ? joystick_1[3] : joy[3];
+wire m_down_2  = mod_pestplace ? joystick_1[2] : joy[2];
+wire m_left_2  = mod_pestplace ? joystick_1[1] : joy[1];
+wire m_right_2 = mod_pestplace ? joystick_1[0] : joy[0];
+wire m_fire_2  = mod_pestplace ? joystick_1[4] : joy[4];
 
-wire m_up     = joy[3];
-wire m_down   = joy[2];
-wire m_left   = joy[1];
-wire m_right  = joy[0];
-wire m_fire   = joy[4];
+wire m_up      = mod_pestplace ? joystick_0[3] : joy[3];
+wire m_down    = mod_pestplace ? joystick_0[2] : joy[2];
+wire m_left    = mod_pestplace ? joystick_0[1] : joy[1];
+wire m_right   = mod_pestplace ? joystick_0[0] : joy[0];
+wire m_fire    = mod_pestplace ? joystick_0[4] : joy[4];
 
 wire m_start1 =  joy[5];
 wire m_start2 =  joy[6];
@@ -394,6 +397,8 @@ end
 
 wire no_rotate = status[2] | direct_video | mod_pestplace;
 wire rotate_ccw = 0;
+wire flip = 0;
+wire video_rotated;
 screen_rotate screen_rotate (.*);
 
 
