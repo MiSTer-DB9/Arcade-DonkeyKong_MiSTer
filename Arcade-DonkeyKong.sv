@@ -205,6 +205,13 @@ wire [1:0] ar = status[20:19];
 assign VIDEO_ARX = (!ar) ? ((status[2]|mod_pestplace)  ? 8'd8 : 8'd7) : (ar - 1'd1);
 assign VIDEO_ARY = (!ar) ? ((status[2]|mod_pestplace)  ? 8'd7 : 8'd8) : 12'd0;
 
+// Status Bit Map:
+//             Upper                             Lower
+// 0         1         2         3          4         5         6
+// 01234567890123456789012345678901 23456789012345678901234567890123
+// 0123456789ABCDEFGHIJKLMNOPQRSTUV 0123456789ABCDEFGHIJKLMNOPQRSTUV
+// XXXXXX X           XXXXXXXXXXXXX
+
 `include "build_id.v" 
 localparam CONF_STR = {
 	"A.DKONG;;",
@@ -216,6 +223,7 @@ localparam CONF_STR = {
 	"H1O7,Flip Screen,Off,On;",
 	"OOS,Analog Video H-Pos,0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31;",
         "OTV,Analog Video V-Pos,0,1,2,3,4,5,6,7;",
+	"O6,Sound Effects,Sampled,Emulated;",
 	"H2ON,Autosave Hiscores,Off,On;",
 	"P1,Pause options;",
 	"P1OL,Pause when OSD is open,On,Off;",
@@ -334,7 +342,7 @@ reg [7:0] sw[8];
 always @(posedge clk_sys) if (ioctl_wr && (ioctl_index==254) && !ioctl_addr[24:3]) sw[ioctl_addr[2:0]] <= ioctl_dout;
 
 // Core specific mods
-reg mod_dk = 0;
+//reg mod_dk = 0;
 reg mod_dkjr = 0;
 reg mod_dk3 = 0;
 reg mod_radarscope=0;
@@ -345,7 +353,7 @@ always @(posedge clk_sys) begin
 	reg [7:0] mod = 0;
 	if (ioctl_wr & (ioctl_index==1)) mod <= ioctl_dout;
 	
-	mod_dk <= (mod == 0);
+	//mod_dk <= (mod == 0);
 	mod_dkjr <= (mod == 1);
 	mod_dk3 <= (mod == 2);
 	mod_radarscope <= (mod == 3);
@@ -421,26 +429,25 @@ arcade_video #(256,12) arcade_video
 wire [15:0] audio;
 assign AUDIO_L = audio;
 assign AUDIO_R = AUDIO_L;
-assign AUDIO_S = 0;
+assign AUDIO_S = 1;
 
 assign hblank = hbl[8];
 
-reg  ce_vid;
+//reg  ce_vid;
 wire clk_pix;
 wire hbl0;
 reg [8:0] hbl;
 always @(posedge clk_sys) begin
 	reg old_pix;
 	old_pix <= clk_pix;
-	ce_vid <= 0;
+	//ce_vid <= 0;
 	if(~old_pix & clk_pix) begin
-		ce_vid <= 1;
+		//ce_vid <= 1;
 		hbl <= (hbl<<1)|hbl0;
 	end
 end
 
 wire reset = RESET | status[0] | buttons[1]| ioctl_download;
-
 
 
 wire [15:0] main_rom_a;
@@ -515,6 +522,7 @@ dkong_top dkong(
 	.O_PIX(clk_pix),
 
 	.flip_screen(status[7]),
+	.use_emulated_sfx(status[6]),
 	.H_OFFSET(status[28:24]),
 	.V_OFFSET(status[31:29]),
 
