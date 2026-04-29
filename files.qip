@@ -30,5 +30,3 @@ set_global_assignment -name QIP_FILE rtl/T80/T80.qip
 set_global_assignment -name VERILOG_FILE "rtl/pause.v"
 set_global_assignment -name VERILOG_FILE "rtl/hiscore.v"
 set_global_assignment -name SYSTEMVERILOG_FILE "Arcade-DonkeyKong.sv"
-set_global_assignment -name VERILOG_FILE rtl/joydb9md.v
-set_global_assignment -name VERILOG_FILE rtl/joydb15.v
